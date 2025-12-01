@@ -51,7 +51,17 @@ textarea{min-height:90px;resize:vertical}
 </style>
 </head>
 <body>
+# APNA NEWS - Firebase setup (quick)
 
+1. Go to https://console.firebase.google.com
+2. Create new Project -> give name "apna-news" or similar.
+3. In Project Overview -> Add Web App -> copy firebaseConfig and paste into both files (index.html & admin.html).
+4. Enable Authentication -> Email/Password (so admin can create account).
+5. Firestore -> Create database (Start in production or test, but set rules as below).
+6. Storage -> create default bucket (allow public read for files via rules below).
+7. Deploy frontend: push files to GitHub repo and enable GitHub Pages (Settings -> Pages -> branch main -> / (root)).
+
+### Suggested Firestore rules (restrict writes to authenticated users):
 <!-- HEADER -->
 <header class="header">
   <div class="left">
