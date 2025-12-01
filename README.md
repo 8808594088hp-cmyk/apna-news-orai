@@ -1,4 +1,4 @@
-
+<!doctype html>
 <html lang="hi">
 <head>
 <meta charset="utf-8"/>
@@ -31,6 +31,8 @@ body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:#f4f6f8;co
 .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .small{font-size:13px;color:var(--muted)}
 .footer{padding:18px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Admin Modal & Dashboard */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:40}
 .modal{width:880px;max-width:96%;background:#fff;border-radius:10px;padding:14px;box-shadow:0 20px 60px rgba(2,6,23,.3);max-height:90vh;overflow:auto}
 .form-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -41,6 +43,7 @@ textarea{min-height:90px;resize:vertical}
 .small-muted{font-size:12px;color:#666}
 .flex{display:flex;gap:10px;align-items:center}
 .kv{font-weight:700;color:#222}
+/* responsive */
 @media (max-width:900px){
   .container{flex-direction:column;padding:10px}
   .sidebar{width:100%;max-width:100%}
@@ -48,6 +51,8 @@ textarea{min-height:90px;resize:vertical}
 </style>
 </head>
 <body>
+
+<!-- HEADER -->
 <header class="header">
   <div class="left">
     <div class="logo">APNA NEWS</div>
@@ -63,6 +68,7 @@ textarea{min-height:90px;resize:vertical}
   <div class="top-info small" id="dt-wthr">—</div>
 </header>
 
+<!-- NAV -->
 <nav class="nav" id="nav">
   <a href="#" onclick="filterCategory('all');return false">Home</a>
   <a href="#" onclick="filterCategory('khel');return false">Khel</a>
@@ -73,6 +79,7 @@ textarea{min-height:90px;resize:vertical}
   <a href="#" onclick="openLive();return false">Live</a>
 </nav>
 
+<!-- LAYOUT -->
 <div class="container">
   <main class="main">
     <div class="nav-tabs" id="tabs">
@@ -229,16 +236,18 @@ textarea{min-height:90px;resize:vertical}
   </div>
 </div>
 
-<!-- Notifications -->
+<!-- Notifications panel (simple) -->
 <div style="position:fixed;right:12px;bottom:12px;z-index:60" id="notifyArea"></div>
 
 <script>
-/* Storage keys and app state */
+/* -------------------------
+   Storage & Initial Setup
+   -------------------------*/
 const STORAGE_KEY = 'apnaNewsData_v1';
 const ADMIN_KEY = 'apnaNewsAdmin_v1';
 let appState = { filter:'all', search:'', sort:'new', loggedIn:false, editingId:null };
 
-/* Seed demo data if empty */
+// default demo content if none
 if(!localStorage.getItem(STORAGE_KEY)){
   const demo = [
     { id: genId(), title:"India Won The Match!", desc:"Bharat ne final match jeet kar itihaas racha...", category:"khel", src:"APNA", time:Date.now()-2*60*1000, mediaType:'image', mediaData:'https://i.ibb.co/2hbG6zq/news1.jpg' },
@@ -251,10 +260,14 @@ if(!localStorage.getItem(ADMIN_KEY)){
   localStorage.setItem(ADMIN_KEY, JSON.stringify({user:'admin',pass:'1234'}));
 }
 
-/* Helpers */
+/* -------------------------
+   Utility functions
+   -------------------------*/
 function genId(){ return 'n_'+Math.random().toString(36).slice(2,9) }
+
 function readData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]') }catch(e){return []} }
 function writeData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
 function timeAgo(ts){
   const sec=Math.floor((Date.now()-ts)/1000);
   if(sec<60) return sec+' sec ago';
@@ -263,22 +276,27 @@ function timeAgo(ts){
   return new Date(ts).toLocaleString();
 }
 
-/* Render news list */
+/* -------------------------
+   Render news list (main)
+   -------------------------*/
 function renderNews(){
   const container = document.getElementById('newsList');
   const search = document.getElementById('searchInput').value.trim().toLowerCase();
   appState.search = search;
-  appState.sort = document.getElementById('sortBy') ? document.getElementById('sortBy').value : 'new';
+  appState.sort = document.getElementById('sortBy').value;
   let data = readData();
 
+  // filters
   if(appState.filter && appState.filter!=='all'){
     data = data.filter(n => n.category === appState.filter);
   }
   if(search){
     data = data.filter(n => (n.title+' '+n.desc+' '+(n.src||'')).toLowerCase().includes(search));
   }
+  // sort
   data.sort((a,b)=> appState.sort==='new' ? b.time - a.time : a.time - b.time);
 
+  // timeline style: simply ordered cards
   container.innerHTML = data.map(n=>{
     const mediaHtml = n.mediaType === 'image'
       ? `<img src="${escapeHtml(n.mediaData)}" alt="">`
@@ -298,10 +316,12 @@ function renderNews(){
     </article>`;
   }).join('') || '<div class="small-muted">Koi bhi news nahi mili — add karo admin se.</div>';
 
-  document.getElementById('totalNews') && (document.getElementById('totalNews').innerText = data.length);
+  document.getElementById('totalNews').innerText = data.length;
 }
 
-/* Admin functions */
+/* -------------------------
+   Admin: Save / Edit / Delete
+   -------------------------*/
 function openAdminLogin(){ document.getElementById('adminLoginModal').style.display='flex' }
 function closeAdminLogin(){ document.getElementById('adminLoginModal').style.display='none' }
 
@@ -340,7 +360,8 @@ function saveNews(){
   const desc = document.getElementById('newsDesc').value.trim();
   const cat = document.getElementById('newsCategory').value;
   const src = document.getElementById('newsSource').value.trim();
-  const timeField = document.getElementById('newsTime') ? document.getElementById('newsTime').value.trim() : '';
+  const timeField = document.getElementById('newsTime').value.trim();
+
   if(!title){ showToast('Title चाहिए', 'error'); return; }
 
   const file = document.getElementById('mediaFile').files[0];
@@ -359,6 +380,7 @@ function saveNews(){
 function persistNews(title, desc, cat, src, timeField, mediaData, mediaType){
   const data = readData();
   if(appState.editingId){
+    // update
     const idx = data.findIndex(d=>d.id===appState.editingId);
     if(idx===-1) return;
     data[idx].title = title;
@@ -386,7 +408,7 @@ function clearNewsForm(){
   document.getElementById('newsDesc').value='';
   document.getElementById('mediaFile').value='';
   document.getElementById('newsSource').value='';
-  document.getElementById('newsTime') && (document.getElementById('newsTime').value='');
+  document.getElementById('newsTime').value='';
   appState.editingId = null;
 }
 
@@ -414,7 +436,7 @@ function startEdit(id){
   document.getElementById('newsDesc').value = item.desc;
   document.getElementById('newsCategory').value = item.category;
   document.getElementById('newsSource').value = item.src || '';
-  document.getElementById('newsTime') && (document.getElementById('newsTime').value = new Date(item.time).toISOString().slice(0,16));
+  document.getElementById('newsTime').value = new Date(item.time).toISOString().slice(0,16);
   showToast('Edit mode – media replace optional', 'info');
 }
 
@@ -428,7 +450,9 @@ function deleteNews(id){
   showToast('Deleted', 'info');
 }
 
-/* Filters / Tabs */
+/* -------------------------
+   Filters / Tabs
+   -------------------------*/
 function selectTab(el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -439,11 +463,18 @@ function filterCategory(cat){
   renderNews();
 }
 
-/* E-Paper / Reels / Live */
+/* -------------------------
+   E-Paper / Reels / Live
+   -------------------------*/
 function openEpaper(){ document.getElementById('epaperModal').style.display='flex' }
 function closeEpaper(){ document.getElementById('epaperModal').style.display='none' }
-function openReels(){ document.getElementById('reelsModal').style.display='flex'; renderReels(); }
+
+function openReels(){
+  document.getElementById('reelsModal').style.display='flex';
+  renderReels();
+}
 function closeReels(){ document.getElementById('reelsModal').style.display='none' }
+
 function renderReels(){
   const grid = document.getElementById('reelsGrid');
   const reels = readData().filter(n=>n.mediaType==='video');
@@ -458,15 +489,24 @@ function renderReels(){
     </div>`;
   }).join('');
 }
-function openLive(){ window.scrollTo({top:0,behavior:'smooth'}); showToast('Live opened in side panel', 'info'); }
 
-/* Weather (open-meteo) */
+function openLive(){
+  window.scrollTo({top:0,behavior:'smooth'});
+  showToast('Live opened in side panel', 'info');
+  // focus the iframe (already present)
+}
+
+/* -------------------------
+   Weather (simple demo)
+   -------------------------*/
 async function fetchWeather(){
   const city = document.getElementById('cityInput').value.trim();
   const panel = document.getElementById('weatherPanel');
   panel.innerHTML = 'Fetching...';
   try{
+    // Try to use open-meteo (no API key) by geolocation or city -> naive approach
     if(city){
+      // Use geocoding via open-meteo (free)
       const g = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`).then(r=>r.json());
       if(!g.results || g.results.length===0){ panel.innerText='City not found'; return; }
       const loc = g.results[0];
@@ -488,9 +528,12 @@ async function fetchWeather(){
   }
 }
 
-/* Notifications & Toasts */
+/* -------------------------
+   Notifications & Toasts
+   -------------------------*/
 function toggleNotifications(){
   showToast('Sample Notification: Breaking news!', 'info');
+  // also try system notification
   if("Notification" in window){
     if(Notification.permission==="granted"){
       new Notification("APNA NEWS", {body:"This is a sample notification from Apna News."});
@@ -501,6 +544,7 @@ function toggleNotifications(){
     }
   }
 }
+
 function showToast(msg, type='info', timeout=2500){
   const area = document.getElementById('notifyArea');
   const el = document.createElement('div');
@@ -512,13 +556,16 @@ function showToast(msg, type='info', timeout=2500){
   setTimeout(()=>{ el.style.opacity=0; setTimeout(()=>el.remove(),400); }, timeout);
 }
 
-/* Export / Import */
+/* -------------------------
+   Export / Import data
+   -------------------------*/
 function exportData(){
   const dataStr = localStorage.getItem(STORAGE_KEY);
   const blob = new Blob([dataStr], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download='apna_news_data.json'; a.click(); URL.revokeObjectURL(url);
 }
+
 function importDataPrompt(){
   const inp = document.createElement('input'); inp.type='file'; inp.accept='.json';
   inp.onchange = e=>{
@@ -530,11 +577,17 @@ function importDataPrompt(){
   inp.click();
 }
 
-/* Helpers */
+/* -------------------------
+   Helpers: escapeHtml
+   -------------------------*/
 function escapeHtml(s){
   if(!s && s!==0) return '';
   return String(s).replace(/[&<>"'`]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[m]; });
 }
+
+/* -------------------------
+   Init: date/time + first render
+   -------------------------*/
 function tickDateTime(){
   const el = document.getElementById('dt-wthr');
   const d = new Date();
@@ -544,12 +597,26 @@ setInterval(tickDateTime,1000); tickDateTime();
 
 renderNews();
 
-/* UI niceties */
+/* -------------------------
+   Small helpers for external actions
+   -------------------------*/
+function startDemoAdd(){
+  openAdminLogin();
+}
+function toggleAdmin(){
+  if(appState.loggedIn) openAdminDashboard(); else openAdminLogin();
+}
+
+/* -------------------------
+   Simple escape for security and finishing touches
+   -------------------------*/
 document.addEventListener('keydown', ev=>{
   if(ev.key==='Escape'){
     document.querySelectorAll('.modal-bg').forEach(m=>m.style.display='none');
   }
 });
+
+// close modals clicking outside
 document.querySelectorAll('.modal-bg').forEach(bg=>{
   bg.addEventListener('click', e=>{
     if(e.target===bg) bg.style.display='none';
