@@ -156,6 +156,164 @@ textarea{min-height:90px;resize:vertical}
     <p class="small-muted" style="margin-top:8px">Demo credentials: admin / 1234</p>
   </div>
 </div>
+> Hasnain:
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APNA NEWS — Admin</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;margin:0;padding:18px;background:#fafafa}
+    .card{max-width:760px;margin:0 auto;background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+    label{display:block;margin-top:10px;font-weight:600}
+    input,textarea,select{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #ddd}
+    button{margin-top:12px;padding:10px 14px;border-radius:8px;cursor:pointer;background:#d60000;color:#fff;border:0}
+    .row{display:flex;gap:10px}
+  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div class="card">
+    <h2>APNA NEWS - Admin Panel</h2>
+
+    <div id="authSection">
+      <label>Email</label>
+      <input id="email" type="email" placeholder="admin@domain.com">
+      <label>Password</label>
+      <input id="password" type="password" placeholder="password">
+      <div class="row">
+        <button id="loginBtn">Login</button>
+        <button id="signupBtn" style="background:#666">Create Admin (one-time)</button>
+      </div>
+      <hr>
+    </div>
+
+    <div id="panel" style="display:none">
+      <div style="text-align:right"><button id="logoutBtn" style="background:#666">Logout</button></div>
+      <label>Title</label><input id="title">
+      <label>Category</label><input id="category" placeholder="Politics, Sports, Local...">
+      <label>Summary / Content</label><textarea id="summary" rows="4"></textarea>
+
+      <label>Image (jpg/png)</label><input id="imageFile" type="file" accept="image/*">
+      <label>Video (mp4) — optional</label><input id="videoFile" type="file" accept="video/*">
+      <label>Other file (pdf) — optional</label><input id="otherFile" type="file" accept=".pdf,.doc,.docx">
+
+      <button id="uploadBtn">Upload News</button>
+      <div id="status" style="margin-top:8px;color:#333"></div>
+    </div>
+  </div>
+
+<script>
+  // === REPLACE with your firebaseConfig ===
+  const firebaseConfig = {
+    apiKey: "REPLACE",
+    authDomain: "REPLACE",
+    projectId: "REPLACE",
+    storageBucket: "REPLACE",
+    messagingSenderId: "REPLACE",
+    appId: "REPLACE"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  const emailIn = document.getElementById('email');
+  const passIn = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const signupBtn = document.getElementById('signupBtn');
+  const panel = document.getElementById('panel');
+  const authSection = document.getElementById('authSection');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const status = document.getElementById('status');
+
+  auth.onAuthStateChanged(u => {
+    if(u){
+      authSection.style.display='none';
+      panel.style.display='block';
+    } else {
+      authSection.style.display='block';
+      panel.style.display='none';
+    }
+  });
+
+  signupBtn.onclick = async () => {
+    const email = emailIn.value.trim(), pw = passIn.value.trim();
+    if(!email || !pw){ alert('Enter email & password'); return; }
+    try{
+      await auth.createUserWithEmailAndPassword(email,pw);
+      alert('Admin account created and logged in.');
+    } catch(e){ alert('Error: '+e.message); }
+  };
+
+  loginBtn.onclick = async () => {
+    try{
+      await auth.signInWithEmailAndPassword(emailIn.value.trim(), passIn.value.trim());
+    } catch(e){ alert('Login failed: '+e.message); }
+  };
+
+  logoutBtn.onclick = () => auth.signOut();
+
+> Hasnain:
+uploadBtn.onclick = async () => {
+    status.textContent = 'Uploading...';
+    const title = document.getElementById('title').value.trim();
+    const category = document.getElementById('category').value.trim();
+    const summary = document.getElementById('summary').value.trim();
+    const imageFile = document.getElementById('imageFile').files[0];
+    const videoFile = document.getElementById('videoFile').files[0];
+    const otherFile = document.getElementById('otherFile').files[0];
+
+    if(!title){ alert('Title required'); status.textContent=''; return; }
+
+    const docRef = db.collection('news').doc();
+    const createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    const data = { title, category, summary, createdAt };
+
+    try {
+      // Upload image
+      if(imageFile){
+        const imgRef = storage.ref().child(news/${docRef.id}/image_${Date.now()}_${imageFile.name});
+        await imgRef.put(imageFile);
+        data.imageURL = await imgRef.getDownloadURL();
+      }
+      // Upload video
+      if(videoFile){
+        const vidRef = storage.ref().child(news/${docRef.id}/video_${Date.now()}_${videoFile.name});
+        await vidRef.put(videoFile);
+        data.videoURL = await vidRef.getDownloadURL();
+      }
+      // Other file
+      if(otherFile){
+        const fileRef = storage.ref().child(news/${docRef.id}/file_${Date.now()}_${otherFile.name});
+        await fileRef.put(otherFile);
+        data.fileURL = await fileRef.getDownloadURL();
+      }
+
+      await docRef.set(data);
+      status.textContent = 'Uploaded successfully!';
+      // clear inputs
+      document.getElementById('title').value='';
+      document.getElementById('summary').value='';
+      document.getElementById('category').value='';
+      document.getElementById('imageFile').value='';
+      document.getElementById('videoFile').value='';
+      document.getElementById('otherFile').value='';
+    } catch(err){
+      console.error(err);
+      alert('Upload error: '+err.message);
+      status.textContent = 'Error during upload';
+    }
+  };
+</script>
+</body>
+</html>
 
 <!-- ADMIN DASHBOARD (Add/Edit/Delete) -->
 <div class="modal-bg" id="adminDashModal">
@@ -518,7 +676,7 @@ async function fetchWeather(){
         const weather = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`).then(r=>r.json());
         panel.innerHTML = `Nearby • Temp: ${weather.current_weather.temperature}°C • Wind: ${weather.current_weather.windspeed} km/h`;
       }, err=>{
-        panel.innerHTML = 'Location denied — enter city';
+        panel.innerHTML = 'Location denied — enter orai city';
       }, {timeout:10000});
     } else {
       panel.innerHTML = 'Geolocation not supported';
@@ -544,7 +702,97 @@ function toggleNotifications(){
     }
   }
 }
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APNA NEWS - Live</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif; background:#f7f7f8; margin:0; padding:16px; color:#111}
+    .container{max-width:900px;margin:0 auto;}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    header h1{margin:0;font-size:24px;color:#d60000}
+    .card{background:#fff;border-radius:8px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+    .meta{font-size:12px;color:#666;margin-bottom:8px}
+    img.resp{max-width:100%;border-radius:6px;margin-top:8px}
+    video{max-width:100%;margin-top:8px;border-radius:6px}
+  </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>APNA NEWS</h1>
+      <div style="margin-left:auto"><a href="admin.html">Admin Login</a></div>
+    </header>
 
+    <div id="feed">Loading news...</div>
+  </div>
+
+<script>
+  // === REPLACE with your firebaseConfig from Firebase console ===
+  const firebaseConfig = {
+    apiKey: "REPLACE",
+    authDomain: "REPLACE",
+    projectId: "REPLACE",
+    storageBucket: "REPLACE",
+    messagingSenderId: "REPLACE",
+    appId: "REPLACE"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  // Fetch latest news (ordered by createdAt desc)
+  async function loadNews(){
+    const feed = document.getElementById('feed');
+    feed.innerHTML = 'Loading news...';
+    try {
+      const snap = await db.collection('news').orderBy('createdAt','desc').limit(50).get();
+      if(snap.empty){ feed.innerHTML = '<p>No news yet.</p>'; return; }
+      let html = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const time = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString('hi-IN') : '';
+        html += <div class="card">
+                  <div class="meta">${d.category || 'General'} • ${time}</div>
+                  <h3>${escapeHtml(d.title || '')}</h3>
+                  <p>${escapeHtml(d.summary || '')}</p>;
+        if(d.imageURL){
+          html += <img class="resp" src="${d.imageURL}" alt="news image">;
+        }
+        if(d.videoURL){
+          html += <video controls src="${d.videoURL}"></video>;
+        }
+        if(d.fileURL){
+          html += <div style="margin-top:8px"><a target="_blank" href="${d.fileURL}">Download attachment</a></div>;
+        }
+        html += </div>;
+      });
+      feed.innerHTML = html;
+    } catch(err){
+      console.error(err);
+      feed.innerHTML = '<p>Error loading news.</p>';
+    }
+  }
+
+  function escapeHtml(s){
+    if(!s) return '';
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  loadNews();
+
+  // Optional: realtime updates (uncomment to enable)
+  db.collection('news').orderBy('createdAt','desc').limit(50)
+    .onSnapshot(snapshot => { loadNews(); });
+</script>
+</body>
+</html>
 function showToast(msg, type='info', timeout=2500){
   const area = document.getElementById('notifyArea');
   const el = document.createElement('div');
@@ -624,5 +872,96 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
 });
 </script>
 
+</body>
+</html>
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>APNA NEWS - Live</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif; background:#f7f7f8; margin:0; padding:16px; color:#111}
+    .container{max-width:900px;margin:0 auto;}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    header h1{margin:0;font-size:24px;color:#d60000}
+    .card{background:#fff;border-radius:8px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+    .meta{font-size:12px;color:#666;margin-bottom:8px}
+    img.resp{max-width:100%;border-radius:6px;margin-top:8px}
+    video{max-width:100%;margin-top:8px;border-radius:6px}
+  </style>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>APNA NEWS</h1>
+      <div style="margin-left:auto"><a href="admin.html">Admin Login</a></div>
+    </header>
+
+    <div id="feed">Loading news...</div>
+  </div>
+
+<script>
+  // === REPLACE with your firebaseConfig from Firebase console ===
+  const firebaseConfig = {
+    apiKey: "REPLACE",
+    authDomain: "REPLACE",
+    projectId: "REPLACE",
+    storageBucket: "REPLACE",
+    messagingSenderId: "REPLACE",
+    appId: "REPLACE"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  // Fetch latest news (ordered by createdAt desc)
+  async function loadNews(){
+    const feed = document.getElementById('feed');
+    feed.innerHTML = 'Loading news...';
+    try {
+      const snap = await db.collection('news').orderBy('createdAt','desc').limit(50).get();
+      if(snap.empty){ feed.innerHTML = '<p>No news yet.</p>'; return; }
+      let html = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const time = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleString('hi-IN') : '';
+        html += <div class="card">
+                  <div class="meta">${d.category || 'General'} • ${time}</div>
+                  <h3>${escapeHtml(d.title || '')}</h3>
+                  <p>${escapeHtml(d.summary || '')}</p>;
+        if(d.imageURL){
+          html += <img class="resp" src="${d.imageURL}" alt="news image">;
+        }
+        if(d.videoURL){
+          html += <video controls src="${d.videoURL}"></video>;
+        }
+        if(d.fileURL){
+          html += <div style="margin-top:8px"><a target="_blank" href="${d.fileURL}">Download attachment</a></div>;
+        }
+        html += </div>;
+      });
+      feed.innerHTML = html;
+    } catch(err){
+      console.error(err);
+      feed.innerHTML = '<p>Error loading news.</p>';
+    }
+  }
+
+  function escapeHtml(s){
+    if(!s) return '';
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  loadNews();
+
+  // Optional: realtime updates (uncomment to enable)
+  db.collection('news').orderBy('createdAt','desc').limit(50)
+    .onSnapshot(snapshot => { loadNews(); });
+</script>
 </body>
 </html>
